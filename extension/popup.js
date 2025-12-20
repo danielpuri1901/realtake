@@ -6,8 +6,8 @@ const searchBtn = document.getElementById("search-btn");
 const resultsDiv = document.getElementById("results");
 const errorDiv = document.getElementById("error");
 
-// Auto-detect product when popup opens
-autoDetectProduct();
+// Check for pending query from context menu, otherwise auto-detect
+initializeQuery();
 
 // Handle search button click
 searchBtn.addEventListener("click", handleSearch);
@@ -18,6 +18,39 @@ queryInput.addEventListener("keypress", (e) => {
     handleSearch();
   }
 });
+
+/**
+ * Initialize the query input.
+ * First checks if there's a pending query from context menu,
+ * otherwise falls back to auto-detection from the current page.
+ */
+function initializeQuery() {
+  // Check for pending query from context menu
+  chrome.storage.local.get(["pendingQuery", "pendingSource", "pendingUrl"], (result) => {
+    if (result.pendingQuery) {
+      let query = result.pendingQuery;
+      let source = result.pendingSource || "selection";
+
+      // If it came from page context, use full smart detection (URL + title)
+      if (source === "page" && result.pendingUrl) {
+        query = extractProductName(result.pendingUrl, result.pendingQuery) || query;
+      } else if (source === "page") {
+        // Fallback to just cleaning if no URL
+        query = cleanTitle(query);
+        query = simplifyTitle(query);
+      }
+
+      queryInput.value = query;
+      resultsDiv.innerHTML = `<p style="color: #6b7280; font-size: 12px;">From ${source}: "${query}"</p>`;
+
+      // Clear the pending data so it doesn't persist
+      chrome.storage.local.remove(["pendingQuery", "pendingSource", "pendingUrl"]);
+    } else {
+      // No pending query, auto-detect from page
+      autoDetectProduct();
+    }
+  });
+}
 
 /**
  * Tries to extract a product name from the current tab's URL and title.

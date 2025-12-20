@@ -8,8 +8,14 @@
     "default_popup": "popup.html"
   },
 
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "contextMenus",
+    "storage"
   ],
 
   "host_permissions": [
