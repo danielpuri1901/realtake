@@ -301,14 +301,100 @@ async function handleSearch() {
 }
 
 function displayResults(data) {
+  if (!data.posts || data.posts.length === 0) {
+    resultsDiv.innerHTML = `<p class="no-results">No Reddit discussions found for "${data.query}"</p>`;
+    return;
+  }
+
+  // Build verdict section
+  const verdictClass = data.verdict.includes("recommended") ? "positive" :
+                       data.verdict.includes("negative") ? "negative" : "neutral";
+
+  // Build pros list
+  const prosHtml = data.pros && data.pros.length > 0
+    ? data.pros.map(pro => `<li>${escapeHtml(pro)}</li>`).join("")
+    : "<li class='empty'>No clear pros found</li>";
+
+  // Build cons list
+  const consHtml = data.cons && data.cons.length > 0
+    ? data.cons.map(con => `<li>${escapeHtml(con)}</li>`).join("")
+    : "<li class='empty'>No clear cons found</li>";
+
+  // Build alternatives
+  const altHtml = data.alternatives && data.alternatives.length > 0
+    ? data.alternatives.map(alt => `<span class="alt-tag">${escapeHtml(alt)}</span>`).join("")
+    : "<span class='empty'>None mentioned</span>";
+
+  // Build top comment
+  const topCommentHtml = data.top_comment
+    ? `<div class="top-comment">
+         <div class="comment-body">"${escapeHtml(truncate(data.top_comment.body, 500))}"</div>
+         <div class="comment-meta">— u/${data.top_comment.author} (▲ ${formatNumber(data.top_comment.score)})</div>
+       </div>`
+    : "";
+
+  // Build posts list (collapsible)
+  const postsHtml = data.posts.map(post => `
+    <a href="${post.url}" target="_blank" class="post-card">
+      <div class="post-header">
+        <span class="subreddit">r/${post.subreddit}</span>
+        <span class="score">▲ ${formatNumber(post.score)}</span>
+      </div>
+      <div class="post-title">${escapeHtml(post.title)}</div>
+    </a>
+  `).join("");
+
   resultsDiv.innerHTML = `
-    <p><strong>Query:</strong> ${data.query}</p>
-    <p><strong>Status:</strong> ${data.status}</p>
-    <p><strong>Summary:</strong> ${data.data.summary}</p>
-    <p style="color: #6b7280; font-size: 12px; margin-top: 8px;">
-      Reddit integration coming soon...
-    </p>
+    <div class="analysis-section">
+      <div class="verdict ${verdictClass}">${data.verdict}</div>
+      <div class="stats">${data.posts_analyzed} posts, ${data.comments_analyzed} comments analyzed</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title pros-title">✓ Pros</div>
+      <ul class="pros-list">${prosHtml}</ul>
+    </div>
+
+    <div class="section">
+      <div class="section-title cons-title">✗ Cons</div>
+      <ul class="cons-list">${consHtml}</ul>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Alternatives mentioned</div>
+      <div class="alternatives">${altHtml}</div>
+    </div>
+
+    ${topCommentHtml ? `
+    <div class="section">
+      <div class="section-title">Top comment</div>
+      ${topCommentHtml}
+    </div>
+    ` : ""}
+
+    <div class="section">
+      <div class="section-title">Source discussions</div>
+      <div class="posts-list">${postsHtml}</div>
+    </div>
   `;
+}
+
+function truncate(text, maxLength) {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + "...";
+}
+
+function formatNumber(num) {
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + "k";
+  }
+  return num.toString();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 function showError(message) {

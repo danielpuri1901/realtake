@@ -59,13 +59,203 @@ h1 {
 .results {
   background: white;
   border-radius: 8px;
-  padding: 12px;
   border: 1px solid #e5e7eb;
-  min-height: 60px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .results:empty {
   display: none;
+}
+
+.results-header {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 13px;
+  color: #374151;
+}
+
+.posts-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.post-card {
+  display: block;
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.post-card:hover {
+  background: #f9fafb;
+}
+
+.post-card:last-child {
+  border-bottom: none;
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.subreddit {
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+.score {
+  font-size: 11px;
+  color: #f97316;
+  font-weight: 600;
+}
+
+.post-title {
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.post-meta {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.no-results {
+  padding: 12px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Analysis Sections */
+.analysis-section {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.verdict {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.verdict.positive {
+  color: #059669;
+}
+
+.verdict.negative {
+  color: #dc2626;
+}
+
+.verdict.neutral {
+  color: #d97706;
+}
+
+.stats {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.section {
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.pros-title {
+  color: #059669;
+}
+
+.cons-title {
+  color: #dc2626;
+}
+
+.pros-list, .cons-list {
+  list-style: none;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.pros-list li, .cons-list li {
+  padding: 4px 0;
+  line-height: 1.4;
+}
+
+.pros-list li::before {
+  content: "• ";
+  color: #059669;
+}
+
+.cons-list li::before {
+  content: "• ";
+  color: #dc2626;
+}
+
+li.empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+li.empty::before {
+  content: "";
+}
+
+.alternatives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.alt-tag {
+  background: #ede9fe;
+  color: #7c3aed;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.empty {
+  color: #9ca3af;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.top-comment {
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.comment-body {
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.comment-meta {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 6px;
 }
 
 .error {
