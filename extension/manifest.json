@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "RealTake",
   "version": "0.1.0",
-  "description": "Real opinions on SaaS, subscriptions & digital products - sourced from Reddit",
+  "description": "See what Reddit really thinks before you buy SaaS or subscriptions",
 
   "action": {
     "default_popup": "popup.html"
