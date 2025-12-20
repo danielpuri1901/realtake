@@ -1,5 +1,5 @@
 /**
- * Service Worker for Reddit Check
+ * Service Worker for RealTake
  *
  * This runs in the background and handles:
  * - Creating the right-click context menu
@@ -10,19 +10,19 @@
 chrome.runtime.onInstalled.addListener(() => {
   // Menu item that appears when you right-click on a page
   chrome.contextMenus.create({
-    id: "reddit-check-page",
-    title: "Reddit Check this page",
+    id: "realtake-page",
+    title: "RealTake: Check this product",
     contexts: ["page"]  // Shows when right-clicking on the page background
   });
 
   // Menu item that appears when you right-click on selected text
   chrome.contextMenus.create({
-    id: "reddit-check-selection",
-    title: 'Reddit Check "%s"',  // %s gets replaced with selected text
+    id: "realtake-selection",
+    title: 'RealTake: "%s"',  // %s gets replaced with selected text
     contexts: ["selection"]  // Shows when text is selected
   });
 
-  console.log("Reddit Check: Context menus created");
+  console.log("RealTake: Context menus created");
 });
 
 // Handle context menu clicks
@@ -31,11 +31,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   let source = "";
   let url = "";
 
-  if (info.menuItemId === "reddit-check-selection") {
+  if (info.menuItemId === "realtake-selection") {
     // User selected text and right-clicked
     query = info.selectionText;
     source = "selection";
-  } else if (info.menuItemId === "reddit-check-page") {
+  } else if (info.menuItemId === "realtake-page") {
     // User right-clicked on page - we'll use the page title + URL
     query = tab.title || "";
     url = tab.url || "";

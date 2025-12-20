@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Reddit Check",
+  "name": "RealTake",
   "version": "0.1.0",
-  "description": "Search Reddit for real opinions on products and software",
+  "description": "Real opinions on SaaS, subscriptions & digital products - sourced from Reddit",
 
   "action": {
     "default_popup": "popup.html"

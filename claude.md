@@ -1,149 +1,160 @@
-# ResearchBuddy - Smart Purchase Research Assistant
+# RealTake - Real Opinions for Digital Purchases
 
-  ## Project Overview
-  A Chrome extension + Python backend that helps users research products/software before buying. The killer feature: **searches Reddit for real human opinions** - not just Amazon reviews which can be
-  fake. Answers the real question: "Does this actually get the job done?"
+## The Problem We Solve
 
-  Works for:
-  - Physical products (Amazon, etc.)
-  - Software/subscriptions (GeForce Now, VPNs, apps)
-  - Services (anything people discuss on Reddit)
+**SaaS, subscriptions, and digital products have no built-in review system.**
 
-  ## Scope
-  - **Platform:** Chrome extension
-  - **AI approach:** Local models (scikit-learn, NLTK/spaCy)
-  - **User system:** None (stateless tool)
-  - **Timeline:** Side project over several weeks
+| Product Type | Has Reviews? | Reality |
+|--------------|--------------|---------|
+| Amazon/Physical | Yes (but often fake) | Solved (Fakespot, etc.) |
+| **SaaS** | No - just testimonials | **Unsolved** |
+| **Subscriptions** | No | **Unsolved** |
+| **Games/Digital** | Steam (curated) | **Partially solved** |
 
-  ## Tech Stack
+When evaluating Notion vs Obsidian, GeForce Now vs Xbox Cloud, or any SaaS tool - you get:
+- Marketing pages with cherry-picked testimonials
+- G2/Capterra reviews (pay-to-play, often incentivized)
+- **Reddit** - where real, unfiltered opinions live
 
-  ### Browser Extension (Chrome/Manifest V3)
-  - **Language:** TypeScript
-  - **Build:** Vite or Webpack
-  - **UI:** Vanilla CSS or Tailwind (keep it simple)
+**RealTake surfaces Reddit opinions instantly when you're on a product page.**
 
-  ### Python Backend
-  - **Framework:** FastAPI
-  - **ML:** scikit-learn, pandas, numpy
-  - **NLP:** NLTK or spaCy (for text processing)
-  - **HTTP:** httpx or aiohttp (async scraping)
-  - **Database:** SQLite (simple, file-based, no server needed)
+## Our Differentiation
 
-  ### Deployment
-  - **Backend:** Railway, Render, or Fly.io (free tiers available)
-  - **Extension:** Chrome Web Store (or local dev)
+We are NOT competing with:
+- Fakespot/ReviewMeta (Amazon fake review detection)
+- Honey/Rakuten (shopping & coupons)
+- Pigeon (generic Reddit summaries for any page)
 
-  ## Core Features (Priority Order)
+We ARE building:
+- **Niche focus**: SaaS, subscriptions, digital products, games
+- **Purchase-decision framing**: "Is this worth it?" not just "what do people say?"
+- **Smart subreddit targeting**: r/SaaS, r/software, r/gaming, r/cloudgaming, etc.
+- **Structured output**: Pros, Cons, Alternatives, Dealbreakers
 
-  ### Phase 1: Foundation (Week 1)
-  1. **Chrome Extension Scaffold**
-     - Manifest V3 setup
-     - Works on ANY page (user can trigger research on any product/software)
-     - Popup UI with search input + results display
-     - Background service worker for API calls
-     - Context menu: "Research this with ResearchBuddy"
+## Target Users
 
-  2. **Python Backend Scaffold**
-     - FastAPI project structure
-     - Basic endpoint: `/research` accepts product name/query
-     - Docker setup for consistent dev environment
+- Developer evaluating tools (Cursor vs Copilot vs Windsurf)
+- Gamer considering subscriptions (GeForce Now vs Xbox Cloud vs PS Plus)
+- Business person looking at SaaS (Notion vs Obsidian vs Roam)
+- Anyone buying something **without a review system built-in**
 
-  ### Phase 2: Reddit Search - THE CORE FEATURE (Week 1-2)
-  1. **Reddit API Integration**
-     - Use Reddit API (free tier: 100 requests/min)
-     - Or use Pushshift API for historical data
-     - Search query: `"{product name}" (review OR worth it OR recommend OR experience)`
+## Tech Stack
 
-  2. **Smart Search Queries**
-     - Auto-generate search variations:
-       - "GeForce Now worth it"
-       - "GeForce Now vs Shadow"
-       - "GeForce Now steam cloud save"
-       - "GeForce Now honest review reddit"
-     - Target subreddits: r/buildapc, r/gaming, r/software, r/BuyItForLife, etc.
+### Browser Extension (Chrome/Manifest V3)
+- **Language:** JavaScript (TypeScript later)
+- **UI:** Vanilla CSS
+- **Features:** Auto-detect product, context menu, smart title parsing
 
-  3. **Comment Quality Scoring (Random Forest)**
-     - Features:
-       - Comment karma score
-       - Account age
-       - Comment length (detail = good)
-       - Has specific details vs generic praise
-       - Author's subreddit karma (domain expertise)
-       - Upvote/downvote ratio
-     - Filter out low-quality/joke comments
-     - Surface the most helpful opinions
+### Python Backend
+- **Framework:** FastAPI
+- **Reddit:** PRAW (Python Reddit API Wrapper)
+- **NLP:** spaCy or NLTK for sentiment/categorization
+- **ML:** scikit-learn for comment quality scoring (later)
 
-  4. **Extract Key Insights**
-     - NLP to categorize comments:
-       - "Works great for..." (positive use cases)
-       - "Doesn't work with..." (limitations)
-       - "I switched to..." (alternatives mentioned)
-       - "After 6 months..." (long-term experience)
-     - Answer common questions:
-       - "Does it get the job done?" (overall sentiment)
-       - "What are the dealbreakers?"
-       - "What alternatives do people recommend?"
+### Deployment
+- **Backend:** Railway, Render, or Fly.io
+- **Extension:** Chrome Web Store
 
-  ### Phase 3: Opinion Summarization (Week 2-3)
-  1. **Aggregate Reddit Opinions**
-     - Cluster similar opinions
-     - Count frequency of pros/cons mentioned
-     - Find consensus vs controversial points
+## Core Features
 
-  2. **Smart Summary Output**
-     - Reddit Consensus (47 discussions, 234 comments analyzed)
-     - WORKS FOR: Steam cloud saves sync perfectly (12 mentions)
-     - WATCH OUT FOR: Input lag on competitive games (15 mentions)
-     - ALTERNATIVES MENTIONED: Xbox Cloud Gaming (7 mentions)
-     - MOST HELPFUL COMMENT with author and upvotes
+### Phase 1: Foundation ✅
+- [x] Chrome extension scaffold
+- [x] Smart product detection from URL/title
+- [x] Marketing buzzword stripping
+- [x] Context menu (right-click support)
+- [x] FastAPI backend with /research endpoint
 
-  ### Phase 4: Amazon Integration (Week 3)
-  1. **Detect Amazon Product Pages**
-     - Content script recognizes Amazon URLs
-     - Auto-extract product name for Reddit search
+### Phase 2: Reddit Integration (Current)
+1. **Reddit API Setup**
+   - PRAW integration
+   - Search: `"{product}" (review OR worth it OR recommend OR experience)`
 
-  2. **Fake Review Detection (Random Forest)**
-     - Secondary feature (Reddit opinions are primary)
-     - Quick trust score for Amazon reviews
+2. **Smart Subreddit Targeting**
+   - Detect product category → search relevant subreddits
+   - SaaS: r/SaaS, r/software, r/selfhosted, r/Entrepreneur
+   - Gaming: r/gaming, r/cloudgaming, r/pcgaming, r/patientgamers
+   - Productivity: r/productivity, r/NotionSo, r/ObsidianMD
 
-  3. **Combine Sources**
-     - Show both Reddit opinions AND Amazon review summary
-     - Highlight discrepancies
+3. **Return Real Discussions**
+   - Top posts mentioning the product
+   - Upvote counts, comment counts
+   - Direct links to discussions
 
-  ### Phase 5: Polish & UX (Week 4)
-  1. **Extension Popup UI**
-     - Search bar: "What are you thinking of buying?"
-     - Results tabs: Reddit | Amazon | Price
-     - Expandable comment cards with source links
+### Phase 3: Opinion Analysis
+1. **Structured Output**
+   ```
+   RealTake: GeForce Now
+   ─────────────────────
+   📊 47 discussions, 234 comments analyzed
 
-  2. **Quick Actions**
-     - Right-click any product name → "Research on Reddit"
-     - Keyboard shortcut to research selected text
+   ✅ WORKS FOR:
+   • Steam cloud saves sync perfectly (12 mentions)
+   • Great for non-competitive games (8 mentions)
 
-  3. **Smart Caching**
-     - Cache Reddit results for 24 hours
+   ⚠️ WATCH OUT FOR:
+   • Input lag on competitive FPS (15 mentions)
+   • Game library rotates (7 mentions)
 
-  ## Resources to Get Started
+   🔄 ALTERNATIVES MENTIONED:
+   • Xbox Cloud Gaming (7 mentions)
+   • Shadow PC (4 mentions)
 
-  ### Reddit API
-  - Reddit API Docs: https://www.reddit.com/dev/api/
-  - PRAW (Python Reddit API Wrapper): https://praw.readthedocs.io/
-  - Get credentials: https://www.reddit.com/prefs/apps
+   💬 TOP COMMENT:
+   "Been using it for 6 months, perfect for RPGs..."
+   — u/gamer123 (+847 upvotes)
+   ```
 
-  ### Browser Extensions
-  - Chrome Extension Docs: https://developer.chrome.com/docs/extensions/mv3/
-  - Plasmo Framework: https://docs.plasmo.com/
+2. **Sentiment Categorization**
+   - Positive use cases ("works great for...")
+   - Limitations ("doesn't work with...")
+   - Alternatives ("I switched to...")
+   - Long-term experience ("after 6 months...")
 
-  ### FastAPI
-  - FastAPI Tutorial: https://fastapi.tiangolo.com/tutorial/
+### Phase 4: Polish
+- Caching (24hr for same product)
+- Loading states
+- Error handling
+- Extension icon/branding
 
-  ### NLP & ML
-  - NLTK Book: https://www.nltk.org/book/
-  - TextBlob: https://textblob.readthedocs.io/
-  - scikit-learn Random Forest docs
+## Project Structure
 
-  ## Next Steps
-  1. Get Reddit API access - Create app at reddit.com/prefs/apps
-  2. Set up dev environment - Python 3.11+, Node 18+
-  3. Create GitHub repo with project structure
-  4. Week 1 goal: Extension popup + Reddit search working end-to-end
+```
+realtake/
+├── extension/           # Chrome extension
+│   ├── manifest.json
+│   ├── popup.html/css/js
+│   └── service-worker.js
+│
+├── backend/             # Python API
+│   ├── main.py
+│   ├── requirements.txt
+│   └── reddit/          # Reddit integration (coming)
+│
+└── CLAUDE.md
+```
+
+## Resources
+
+### Reddit API
+- Get credentials: https://www.reddit.com/prefs/apps
+- PRAW docs: https://praw.readthedocs.io/
+
+### Subreddit Research
+- r/SaaS, r/software, r/selfhosted
+- r/gaming, r/cloudgaming, r/pcgaming
+- r/productivity, r/Entrepreneur
+
+## Competitive Landscape
+
+| Competitor | Focus | Our Advantage |
+|------------|-------|---------------|
+| Pigeon | Generic Reddit summaries | We're niche (SaaS/digital only) |
+| Find on Reddit | Just finds threads | We analyze & structure output |
+| G2/Capterra | B2B reviews (incentivized) | We surface raw Reddit opinions |
+| Fakespot | Amazon fake reviews | Different market entirely |
+
+## Success Metrics
+
+- Can detect product name correctly on 90%+ of SaaS pricing pages
+- Returns relevant Reddit discussions in <3 seconds
+- Structured output helps user make decision faster than manual Reddit search
