@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Reddit Check",
+  "version": "0.1.0",
+  "description": "Search Reddit for real opinions on products and software",
+
+  "action": {
+    "default_popup": "popup.html"
+  },
+
+  "permissions": [
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ]
+}
