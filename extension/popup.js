@@ -78,48 +78,22 @@ function autoDetectProduct() {
 
 /**
  * Extract product name from URL and title.
- * This uses simple heuristics - we can make it smarter over time.
+ * Simple approach: for SaaS, the domain name IS the product name.
  */
 function extractProductName(url, title) {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.replace("www.", "");
 
-    // Strategy 1: Known sites with product info in URL
-    // Example: nvidia.com/geforce-now -> "GeForce Now"
-    const urlPatterns = [
-      { match: /geforce-now/i, name: "GeForce Now" },
-      { match: /amazon\.com.*\/dp\//i, name: extractFromTitle(title) },
-      { match: /netflix\.com/i, name: "Netflix" },
-      // Add more patterns as needed
-    ];
-
-    for (const pattern of urlPatterns) {
-      if (pattern.match.test(url)) {
-        return pattern.name;
-      }
-    }
-
-    // Strategy 2: For SaaS/product sites, combine company name with product
-    // Example: semactic.com with title "The reference GEO tool" -> "Semactic GEO tool"
+    // For most SaaS sites, just use the domain name
+    // mailgun.com -> "Mailgun", n8n.io -> "n8n", notion.so -> "Notion"
     const companyName = extractCompanyName(hostname);
-    const cleanedTitle = title ? cleanTitle(title) : null;
 
-    if (companyName && cleanedTitle) {
-      // Check if title is generic (doesn't contain company name already)
-      if (!cleanedTitle.toLowerCase().includes(companyName.toLowerCase())) {
-        // Combine: "Semactic" + "GEO tool" = "Semactic GEO tool"
-        const simplifiedTitle = simplifyTitle(cleanedTitle);
-        return `${companyName} ${simplifiedTitle}`;
-      }
+    // Special case: Amazon product pages - use the title
+    if (/amazon\.(com|co\.uk|ca|de)/.test(hostname) && title) {
+      return extractFromTitle(title);
     }
 
-    // Strategy 3: Just use cleaned title
-    if (cleanedTitle) {
-      return cleanedTitle;
-    }
-
-    // Fallback: use company name alone
     return companyName;
   } catch (e) {
     return null;
@@ -150,73 +124,79 @@ function extractCompanyName(hostname) {
 }
 
 /**
- * Simplify generic titles by removing filler/marketing words.
- * "Proactive Customer Success & Churn Prediction for SaaS" -> "Churn Prediction"
+ * Extract just the product name from marketing fluff.
+ * "N8n AI Workflow Automation Platform" -> "N8n"
+ * "GeForce Now Cloud Gaming" -> "GeForce Now"
+ * "Slack Team Communication Tool" -> "Slack"
  */
 function simplifyTitle(title) {
-  let simplified = title;
+  // Generic words that are never the product name
+  const genericWords = new Set([
+    // Marketing fluff
+    "ai", "platform", "software", "tool", "tools", "solution", "solutions", "app", "application",
+    "automation", "workflow", "management", "system", "service", "services", "cloud", "online",
+    "team", "business", "enterprise", "pro", "professional", "premium", "free", "the", "best",
+    "top", "leading", "powerful", "simple", "easy", "fast", "secure", "modern", "new",
+    "communication", "collaboration", "productivity", "analytics", "data", "customer", "sales",
+    "marketing", "crm", "erp", "saas", "b2b", "b2c", "for", "and", "with", "your",
+    // Common prefixes/suffixes
+    "official", "welcome", "home", "homepage", "proactive", "ultimate", "advanced", "smart",
+    "intelligent", "revolutionary", "innovative", "cutting-edge", "world-class", "enterprise-grade",
+    "next-gen", "best-in-class", "industry-leading", "seamless", "robust",
+    // Integration/connection words
+    "integration", "integrations", "connect", "api", "apis", "open", "source", "opensource",
+  ]);
 
-  // Remove leading articles and generic words
-  const fillerPrefixes = [
-    "The reference ", "The best ", "The #1 ", "The ", "A ", "An ",
-    "Official ", "Welcome to ", "Home - ", "Homepage - ",
-    "Proactive ", "Ultimate ", "Advanced ", "Smart ", "Intelligent ",
-  ];
+  const words = title.split(/\s+/);
+  const productWords = [];
 
-  for (const filler of fillerPrefixes) {
-    if (simplified.toLowerCase().startsWith(filler.toLowerCase())) {
-      simplified = simplified.slice(filler.length);
+  for (const word of words) {
+    // Clean the word of punctuation for checking
+    const cleanWord = word.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+    // Skip empty words (pure punctuation like "&", "-", "|")
+    if (cleanWord.length === 0) {
+      continue;
+    }
+    // Skip generic words
+    if (genericWords.has(cleanWord)) {
+      continue;
+    }
+    // Skip very short words (unless it's the first/only word)
+    if (cleanWord.length <= 2 && productWords.length > 0) {
+      continue;
+    }
+    // Keep this word as part of product name
+    productWords.push(word);
+    // Most product names are 1-2 words, stop after 2 meaningful words
+    if (productWords.length >= 2) {
+      break;
     }
   }
 
-  // Remove marketing buzzwords entirely
-  const buzzwords = [
-    "Customer Success", "World-Class", "Enterprise-Grade", "Next-Gen",
-    "AI-Powered", "Revolutionary", "Innovative", "Cutting-Edge",
-    "Best-in-Class", "Industry-Leading", "Seamless", "Robust",
-  ];
-
-  for (const buzz of buzzwords) {
-    // Remove buzzword and any following " & " or ", "
-    const patterns = [
-      new RegExp(buzz + " & ", "gi"),
-      new RegExp(buzz + ", ", "gi"),
-      new RegExp(" & " + buzz, "gi"),
-      new RegExp(", " + buzz, "gi"),
-      new RegExp(buzz, "gi"),
-    ];
-    for (const pattern of patterns) {
-      simplified = simplified.replace(pattern, "");
+  // If we extracted nothing, find the first non-generic word
+  if (productWords.length === 0) {
+    for (const word of words) {
+      const cleanWord = word.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      if (cleanWord.length > 0 && !genericWords.has(cleanWord)) {
+        productWords.push(word);
+        break;
+      }
     }
   }
 
-  // Remove trailing generic phrases
-  const trailingSuffixes = [
-    " for SaaS", " for Teams", " for Business", " for Enterprise",
-    " for Startups", " for Everyone", " Platform", " Software",
-    " Solution", " Solutions", " Tool", " Tools",
-  ];
-
-  for (const suffix of trailingSuffixes) {
-    if (simplified.toLowerCase().endsWith(suffix.toLowerCase())) {
-      simplified = simplified.slice(0, -suffix.length);
+  // Last resort: just return the first word with actual letters
+  if (productWords.length === 0 && words.length > 0) {
+    for (const word of words) {
+      const cleanWord = word.replace(/[^a-zA-Z0-9]/g, "");
+      if (cleanWord.length > 0) {
+        productWords.push(cleanWord);
+        break;
+      }
     }
   }
 
-  // Clean up any leftover artifacts
-  simplified = simplified
-    .replace(/\s+/g, " ")      // Multiple spaces -> single space
-    .replace(/^[\s&,]+/, "")   // Leading separators
-    .replace(/[\s&,]+$/, "")   // Trailing separators
-    .trim();
-
-  // If result is too long (>40 chars), just take first few words
-  if (simplified.length > 40) {
-    const words = simplified.split(" ");
-    simplified = words.slice(0, 3).join(" ");
-  }
-
-  return simplified;
+  return productWords.join(" ");
 }
 
 /**
@@ -333,21 +313,41 @@ function displayResults(data) {
        </div>`
     : "";
 
-  // Build posts list (collapsible)
-  const postsHtml = data.posts.map(post => `
-    <a href="${post.url}" target="_blank" class="post-card">
-      <div class="post-header">
-        <span class="subreddit">r/${post.subreddit}</span>
-        <span class="score">▲ ${formatNumber(post.score)}</span>
-      </div>
-      <div class="post-title">${escapeHtml(post.title)}</div>
-    </a>
-  `).join("");
+  // Build discussions with best comments (primary content)
+  const discussionsHtml = data.posts.map(post => {
+    const bestComment = post.best_comment;
+    const commentHtml = bestComment
+      ? `<div class="best-answer">
+           <div class="best-answer-label">Best answer:</div>
+           <div class="best-answer-body">"${escapeHtml(truncate(bestComment.body, 300))}"</div>
+           <div class="best-answer-meta">— u/${bestComment.author} (▲ ${formatNumber(bestComment.score)})</div>
+         </div>`
+      : `<div class="no-answer">Click to see ${post.num_comments} comments</div>`;
+
+    return `
+      <a href="${post.url}" target="_blank" class="discussion-card">
+        <div class="discussion-question">${escapeHtml(post.title)}</div>
+        <div class="discussion-meta">
+          <span class="subreddit">r/${post.subreddit}</span>
+          <span class="dot">•</span>
+          <span class="score">▲ ${formatNumber(post.score)}</span>
+          <span class="dot">•</span>
+          <span class="comments">${post.num_comments} comments</span>
+        </div>
+        ${commentHtml}
+      </a>
+    `;
+  }).join("");
 
   resultsDiv.innerHTML = `
     <div class="analysis-section">
       <div class="verdict ${verdictClass}">${data.verdict}</div>
       <div class="stats">${data.posts_analyzed} posts, ${data.comments_analyzed} comments analyzed</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">What people are saying</div>
+      <div class="discussions-list">${discussionsHtml}</div>
     </div>
 
     <div class="section">
@@ -363,18 +363,6 @@ function displayResults(data) {
     <div class="section">
       <div class="section-title">Alternatives mentioned</div>
       <div class="alternatives">${altHtml}</div>
-    </div>
-
-    ${topCommentHtml ? `
-    <div class="section">
-      <div class="section-title">Top comment</div>
-      ${topCommentHtml}
-    </div>
-    ` : ""}
-
-    <div class="section">
-      <div class="section-title">Source discussions</div>
-      <div class="posts-list">${postsHtml}</div>
     </div>
   `;
 }

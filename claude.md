@@ -55,66 +55,75 @@ We ARE building:
 - **Backend:** Railway, Render, or Fly.io
 - **Extension:** Chrome Web Store
 
-## Core Features
+## Progress Checklist
 
-### Phase 1: Foundation ✅
-- [x] Chrome extension scaffold
-- [x] Smart product detection from URL/title
-- [x] Marketing buzzword stripping
-- [x] Context menu (right-click support)
-- [x] FastAPI backend with /research endpoint
+### COMPLETED ✅
 
-### Phase 2: Reddit Integration (Current)
-1. **Reddit API Setup**
-   - PRAW integration
-   - Search: `"{product}" (review OR worth it OR recommend OR experience)`
+**Extension (Chrome Manifest V3)**
+- [x] manifest.json with permissions (activeTab, contextMenus, storage)
+- [x] popup.html/css/js - main UI
+- [x] service-worker.js - context menu (right-click to research)
+- [x] Auto-detect product from current page URL
+- [x] Smart product name extraction from domain (n8n.io → "N8n")
+- [x] Discussion cards with best comments per post
+- [x] Click-through to Reddit threads
 
-2. **Smart Subreddit Targeting**
-   - Detect product category → search relevant subreddits
-   - SaaS: r/SaaS, r/software, r/selfhosted, r/Entrepreneur
-   - Gaming: r/gaming, r/cloudgaming, r/pcgaming, r/patientgamers
-   - Productivity: r/productivity, r/NotionSo, r/ObsidianMD
+**Backend (FastAPI)**
+- [x] /research endpoint
+- [x] Reddit public JSON API (no auth required)
+- [x] Multiple search queries with variations ("Basic-fit", "Basic fit")
+- [x] Search with opinion keywords (worth, review, experience, recommend)
+- [x] Comment quality scoring (personal experience, specifics, verdicts)
+- [x] Best comment extraction per post
+- [x] Name variation handling (hyphens, spaces)
+- [x] Deduplication of posts
+- [x] Pros/cons extraction (basic)
+- [x] Alternatives extraction (capitalized product names)
+- [x] Verdict generation (positive/negative/mixed)
 
-3. **Return Real Discussions**
-   - Top posts mentioning the product
-   - Upvote counts, comment counts
-   - Direct links to discussions
+### TODO - Polish Before Launch 🔧
 
-### Phase 3: Opinion Analysis
-1. **Structured Output**
-   ```
-   RealTake: GeForce Now
-   ─────────────────────
-   📊 47 discussions, 234 comments analyzed
+**Backend Improvements**
+- [ ] Remove debug logging (clean output)
+- [ ] Improve pros/cons extraction (often shows "No clear pros/cons")
+- [ ] Better verdict accuracy
+- [ ] Error handling (timeouts, rate limits)
+- [ ] Add request caching (don't hit Reddit for same query twice)
 
-   ✅ WORKS FOR:
-   • Steam cloud saves sync perfectly (12 mentions)
-   • Great for non-competitive games (8 mentions)
+**Extension Improvements**
+- [ ] Add extension icon (16x16, 48x48, 128x128)
+- [ ] Loading spinner/skeleton UI
+- [ ] Error states (no results, API down)
+- [ ] "Search again" button
+- [ ] Keyboard shortcut to open
 
-   ⚠️ WATCH OUT FOR:
-   • Input lag on competitive FPS (15 mentions)
-   • Game library rotates (7 mentions)
+**UI Polish**
+- [ ] Better empty states
+- [ ] Truncate long titles gracefully
+- [ ] Mobile-friendly popup width
 
-   🔄 ALTERNATIVES MENTIONED:
-   • Xbox Cloud Gaming (7 mentions)
-   • Shadow PC (4 mentions)
+### TODO - Deployment 🚀
 
-   💬 TOP COMMENT:
-   "Been using it for 6 months, perfect for RPGs..."
-   — u/gamer123 (+847 upvotes)
-   ```
+**Backend Deployment**
+- [ ] Deploy to Railway/Render/Fly.io
+- [ ] Update extension API_URL from localhost to production
+- [ ] Add environment variables for config
+- [ ] Set up CORS for production domain
 
-2. **Sentiment Categorization**
-   - Positive use cases ("works great for...")
-   - Limitations ("doesn't work with...")
-   - Alternatives ("I switched to...")
-   - Long-term experience ("after 6 months...")
+**Chrome Web Store**
+- [ ] Create developer account ($5 one-time fee)
+- [ ] Create promotional images (440x280, 1280x800)
+- [ ] Write store description
+- [ ] Privacy policy (required)
+- [ ] Submit for review
 
-### Phase 4: Polish
-- Caching (24hr for same product)
-- Loading states
-- Error handling
-- Extension icon/branding
+### FUTURE FEATURES 🔮
+
+- [ ] Google Custom Search API (better Reddit discovery)
+- [ ] Subreddit-specific targeting (r/SaaS, r/software)
+- [ ] User accounts / history
+- [ ] Firefox extension
+- [ ] Safari extension
 
 ## Project Structure
 

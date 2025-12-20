@@ -37,15 +37,27 @@ NEGATIVE_KEYWORDS = [
     "overpriced", "not recommended", "stay away"
 ]
 
+# Patterns to find alternatives - capture up to 3 words (product names can be multi-word)
 ALTERNATIVE_PATTERNS = [
-    r"switched to (\w+)",
-    r"moved to (\w+)",
-    r"try (\w+) instead",
-    r"better than (\w+)",
-    r"(\w+) is better",
-    r"use (\w+) instead",
-    r"prefer (\w+)",
+    r"switched to ([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2})",
+    r"moved to ([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2})",
+    r"try ([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2}) instead",
+    r"use ([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2}) instead",
+    r"recommend ([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2})",
+    r"([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2}) is better",
+    r"prefer ([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2}) over",
 ]
+
+# Words that are never product names
+NOT_PRODUCTS = {
+    "i", "the", "a", "an", "it", "this", "that", "they", "them", "you", "we", "my", "your",
+    "just", "maybe", "also", "actually", "really", "definitely", "probably", "personally",
+    "something", "anything", "nothing", "everything", "everyone", "someone", "anyone",
+    "here", "there", "now", "then", "today", "yesterday", "tomorrow", "always", "never",
+    "yes", "no", "not", "but", "and", "or", "if", "so", "very", "much", "more", "less",
+    "good", "bad", "great", "best", "better", "worse", "worst", "nice", "fine", "ok",
+    "some", "any", "all", "most", "many", "few", "other", "another", "same", "different",
+}
 
 # Signals that indicate an insightful, personal comment
 QUALITY_SIGNALS = {
@@ -102,6 +114,49 @@ def root():
     return {"status": "ok", "message": "RealTake API is running"}
 
 
+def extract_product_name(query: str) -> str:
+    """
+    Extract the core product name from marketing fluff.
+    "N8n AI Workflow Automation Platform" -> "n8n"
+    "GeForce Now Cloud Gaming" -> "GeForce Now"
+    "Slack Team Communication Tool" -> "Slack"
+    """
+    # Generic words that are never the product name
+    generic_words = {
+        # Intent words (what user typed)
+        "pricing", "price", "cost", "review", "reviews", "worth", "alternative", "alternatives",
+        # Marketing fluff (from page titles)
+        "ai", "platform", "software", "tool", "tools", "solution", "solutions", "app", "application",
+        "automation", "workflow", "management", "system", "service", "services", "cloud", "online",
+        "team", "business", "enterprise", "pro", "professional", "premium", "free", "the", "best",
+        "top", "leading", "powerful", "simple", "easy", "fast", "secure", "modern", "new",
+        "communication", "collaboration", "productivity", "analytics", "data", "customer", "sales",
+        "marketing", "crm", "erp", "saas", "b2b", "b2c",
+    }
+
+    words = query.split()
+    product_words = []
+
+    for word in words:
+        # Skip generic words
+        if word.lower() in generic_words:
+            continue
+        # Skip single letters or very short words (unless it's the first/only word)
+        if len(word) <= 2 and product_words:
+            continue
+        # Keep this word as part of product name
+        product_words.append(word)
+        # Most product names are 1-2 words, stop after 2 meaningful words
+        if len(product_words) >= 2:
+            break
+
+    # If we extracted nothing, just use the first word
+    if not product_words and words:
+        product_words = [words[0]]
+
+    return " ".join(product_words)
+
+
 @app.get("/research")
 async def research(query: str, limit: int = 5):
     """
@@ -111,17 +166,41 @@ async def research(query: str, limit: int = 5):
         query: The product name to research (e.g., "GeForce Now")
         limit: Max number of posts to analyze (default 5)
     """
-    # Multiple search strategies to find actual reviews
-    search_queries = [
-        f'"{query}" "worth it"',
-        f'"{query}" review',
-        f'"{query}" recommend',
-        f'subreddit:GeForceNOW "{query}"' if "geforce" in query.lower() else f'"{query}" experience',
-    ]
+    # Extract just the product name from marketing fluff
+    product_name = extract_product_name(query)
 
-    print(f"DEBUG: Searching with multiple queries")
+    print(f"DEBUG: Original query: '{query}', Product name: '{product_name}'")
+
+    # Build name variations for matching later
+    name_variations = [product_name.lower()]
+    if "-" in product_name:
+        name_variations.append(product_name.replace("-", " ").lower())
+        name_variations.append(product_name.replace("-", "").lower())
+    if " " in product_name:
+        name_variations.append(product_name.replace(" ", "-").lower())
+        name_variations.append(product_name.replace(" ", "").lower())
+    name_variations = list(set(name_variations))
+
+    print(f"DEBUG: Name variations: {name_variations}")
 
     all_posts = []
+
+    # Multiple search queries - like what people search on Google
+    search_queries = [
+        f'"{product_name}" worth',           # "Basic-fit" worth
+        f'"{product_name}" review',          # "Basic-fit" review
+        f'"{product_name}" experience',      # "Basic-fit" experience
+        f'"{product_name}" recommend',       # "Basic-fit" recommend
+    ]
+    # Also try without hyphen if applicable
+    if "-" in product_name:
+        alt_name = product_name.replace("-", " ")
+        search_queries.extend([
+            f'"{alt_name}" worth',
+            f'"{alt_name}" review',
+        ])
+
+    print(f"DEBUG: Search queries: {search_queries}")
 
     try:
         async with httpx.AsyncClient() as client:
@@ -131,8 +210,8 @@ async def research(query: str, limit: int = 5):
                     params={
                         "q": sq,
                         "sort": "relevance",
-                        "t": "year",    # Last year for freshness
-                        "limit": 15,
+                        "t": "all",
+                        "limit": 25,
                         "type": "link",
                     },
                     headers=HEADERS,
@@ -140,49 +219,50 @@ async def research(query: str, limit: int = 5):
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    posts = data.get("data", {}).get("children", [])
-                    all_posts.extend(posts)
+                    all_posts.extend(data.get("data", {}).get("children", []))
 
             print(f"DEBUG: Total posts fetched: {len(all_posts)}")
 
-        # Deduplicate posts by URL
+        # Deduplicate by URL
         seen_urls = set()
-        posts = []
+        unique_posts = []
         for p in all_posts:
             url = p.get("data", {}).get("permalink", "")
             if url not in seen_urls:
                 seen_urls.add(url)
-                posts.append(p)
+                unique_posts.append(p)
+        all_posts = unique_posts
+        print(f"DEBUG: After dedup: {len(all_posts)} unique posts")
 
-        # Filter to posts that are actually reviews/opinions (not just mentions)
-        review_keywords = ["review", "worth", "recommend", "opinion", "thoughts", "experience", "honest", "feedback"]
-        query_lower = query.lower()
+        # Use name_variations we built earlier for filtering
+        query_variations = name_variations
 
-        def is_review_post(post_data):
-            """Check if post is likely a review, not just a mention."""
+        def is_useful_post(post_data):
+            """Check if post is likely a useful discussion about the product."""
             title = post_data.get("title", "").lower()
-            # Must have query in title AND a review keyword
-            has_query = query_lower in title
-            has_review_keyword = any(kw in title for kw in review_keywords)
-            # Or be in a product-specific subreddit
             subreddit = post_data.get("subreddit", "").lower()
-            is_product_sub = query_lower.replace(" ", "") in subreddit.replace(" ", "")
-            return (has_query and has_review_keyword) or is_product_sub
+            num_comments = post_data.get("num_comments", 0)
 
-        # Prioritize actual review posts
-        filtered_posts = [p for p in posts if is_review_post(p.get("data", {}))]
+            # Must mention the product in title OR be in product subreddit
+            has_query = any(v in title for v in query_variations)
+            # Also check subreddit name (r/basicfit, r/n8n, etc.)
+            is_product_sub = any(v.replace(" ", "").replace("-", "") in subreddit for v in query_variations)
 
-        # If not enough review posts, fall back to any posts with product in title
-        if len(filtered_posts) < limit:
-            for p in posts:
-                if p not in filtered_posts:
-                    title = p.get("data", {}).get("title", "").lower()
-                    if query_lower in title:
-                        filtered_posts.append(p)
-                        if len(filtered_posts) >= limit:
-                            break
+            # Must have at least 1 comment
+            has_comments = num_comments >= 1
 
-        print(f"DEBUG: Found {len(filtered_posts)} relevant posts out of {len(posts)}")
+            return (has_query or is_product_sub) and has_comments
+
+        # Debug: show first few post titles
+        for i, p in enumerate(all_posts[:5]):
+            d = p.get("data", {})
+            print(f"DEBUG: Post {i+1}: r/{d.get('subreddit')} - {d.get('title')[:60]}... ({d.get('num_comments')} comments)")
+
+        # Filter and sort by most comments first
+        filtered_posts = [p for p in all_posts if is_useful_post(p.get("data", {}))]
+        filtered_posts.sort(key=lambda p: p.get("data", {}).get("num_comments", 0), reverse=True)
+
+        print(f"DEBUG: Found {len(filtered_posts)} relevant posts out of {len(all_posts)}")
 
         # Step 2: Fetch comments from filtered posts
         all_comments = []
@@ -206,7 +286,7 @@ async def research(query: str, limit: int = 5):
                     try:
                         comment_response = await client.get(
                             f"https://www.reddit.com{permalink}.json",
-                            params={"limit": 20, "sort": "top"},
+                            params={"limit": 30, "sort": "top"},
                             headers=HEADERS,
                             timeout=10.0,
                         )
@@ -215,14 +295,19 @@ async def research(query: str, limit: int = 5):
                             if len(comment_data) > 1:
                                 comments = extract_comments(comment_data[1])
                                 all_comments.extend(comments)
+
+                                # Find best quality comment for THIS post
+                                best_comment = find_best_comment(comments, name_variations)
+                                if best_comment:
+                                    top_posts[-1]["best_comment"] = best_comment
                     except:
                         pass  # Skip if we can't fetch comments
 
         # Step 3: Analyze all comments
-        analysis = analyze_comments(all_comments, query)
+        analysis = analyze_comments(all_comments, name_variations)
 
         return {
-            "query": query,
+            "query": product_name,  # Show what we actually searched for
             "status": "success",
             "posts_analyzed": len(top_posts),
             "comments_analyzed": len(all_comments),
@@ -269,6 +354,51 @@ def extract_comments(comment_data, depth=0, max_depth=2):
     return comments
 
 
+def find_best_comment(comments, name_variations):
+    """Find the best quality comment from a list."""
+    # Build all variations (lowercase, no spaces, no hyphens)
+    query_variations = []
+    for name in name_variations:
+        name_lower = name.lower()
+        query_variations.append(name_lower)
+        query_variations.append(name_lower.replace(" ", ""))
+        query_variations.append(name_lower.replace("-", ""))
+        query_variations.append(name_lower.replace("-", " "))
+    query_variations = list(set(query_variations))  # Dedupe
+
+    best = None
+    best_score = 0
+
+    for comment in comments:
+        body = comment["body"]
+        body_lower = body.lower()
+
+        # Must be relevant (mention the product)
+        if not any(var in body_lower for var in query_variations):
+            continue
+
+        # Must be substantial
+        if len(body) < 50:
+            continue
+
+        # Score it
+        quality = score_comment_quality(body)
+
+        # Combine quality score with upvote score (quality matters more)
+        combined_score = quality * 2 + min(comment["score"], 100)
+
+        if combined_score > best_score:
+            best_score = combined_score
+            best = {
+                "body": body,
+                "author": comment["author"],
+                "score": comment["score"],
+                "quality_score": quality,
+            }
+
+    return best
+
+
 def score_comment_quality(text):
     """
     Score a comment's quality/insightfulness.
@@ -305,7 +435,7 @@ def score_comment_quality(text):
     return min(score, 100)
 
 
-def analyze_comments(comments, query):
+def analyze_comments(comments, name_variations):
     """Analyze comments for sentiment, pros, cons, and alternatives."""
     pros = []
     cons = []
@@ -316,16 +446,16 @@ def analyze_comments(comments, query):
     best_quality_comment = None
     best_quality_score = 0
 
-    # Create variations of the query to check relevance
-    query_lower = query.lower()
-    query_no_spaces = query_lower.replace(" ", "")
-
-    # Common abbreviations/variations for known products
-    query_variations = [query_lower, query_no_spaces]
-    if "geforce now" in query_lower:
-        query_variations.extend(["gfn", "geforcenow", "geforce now"])
-    if "xbox" in query_lower:
-        query_variations.extend(["xcloud", "xbox cloud", "game pass"])
+    # Build all variations (lowercase, no spaces, no hyphens)
+    query_variations = []
+    for name in name_variations:
+        name_lower = name.lower()
+        query_variations.append(name_lower)
+        query_variations.append(name_lower.replace(" ", ""))
+        query_variations.append(name_lower.replace("-", ""))
+        query_variations.append(name_lower.replace("-", " "))
+    query_variations = list(set(query_variations))  # Dedupe
+    query_lower = name_variations[0].lower()  # Primary name for alternatives check
 
     def is_relevant(text):
         """Check if comment is actually about the product."""
@@ -378,14 +508,20 @@ def analyze_comments(comments, query):
                 break
 
         # Look for alternatives mentioned (in any comment)
-        # Common words to ignore
-        ignore_words = {"the", "a", "an", "it", "this", "that", "they", "them", "i", "you", "we", "my", "your"}
+        # Search original body (not lowercased) to find Capitalized Product Names
         for pattern in ALTERNATIVE_PATTERNS:
-            matches = re.findall(pattern, body_lower, re.IGNORECASE)
+            matches = re.findall(pattern, body)
             for match in matches:
-                match_clean = match.lower().strip()
-                if match_clean not in ignore_words and match_clean != query_lower and len(match_clean) > 2:
-                    alternatives[match_clean] += 1
+                match_clean = match.strip()
+                # Skip if it's not a product (common word) or is the product we're researching
+                if match_clean.lower() in NOT_PRODUCTS:
+                    continue
+                if match_clean.lower() == query_lower:
+                    continue
+                if len(match_clean) < 3:
+                    continue
+                # Keep original capitalization for display
+                alternatives[match_clean] += 1
 
     # Determine overall verdict
     total = positive_count + negative_count
